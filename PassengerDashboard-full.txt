@@ -1,0 +1,782 @@
+import React, { useEffect, useRef, useState } from 'react';
+
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Platform,
+} from 'react-native';
+
+import {
+  Map,
+  Camera,
+  ViewAnnotation,
+} from '@maplibre/maplibre-react-native';
+
+import * as Location from 'expo-location';
+
+import { useAppSelector } from '../store';
+
+// ==================================================
+// MAP STYLE
+// ==================================================
+
+const MAP_STYLE =
+  'https://demotiles.maplibre.org/style.json';
+
+// ==================================================
+// TYPES
+// ==================================================
+
+type TroTro = {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  route: string;
+  availableSeats: number;
+};
+
+// ==================================================
+// SAMPLE TRO-TRO DATA
+// ==================================================
+
+const initialTroTros: TroTro[] = [
+  {
+    id: 1,
+    name: 'TroTro 1',
+    latitude: 5.6037,
+    longitude: -0.1870,
+    route: 'Madina → Circle',
+    availableSeats: 8,
+  },
+  {
+    id: 2,
+    name: 'TroTro 2',
+    latitude: 5.5950,
+    longitude: -0.2050,
+    route: 'Lapaz → Kaneshie',
+    availableSeats: 5,
+  },
+  {
+    id: 3,
+    name: 'TroTro 3',
+    latitude: 5.6200,
+    longitude: -0.1700,
+    route: 'Madina → 37',
+    availableSeats: 12,
+  },
+  {
+    id: 4,
+    name: 'TroTro 4',
+    latitude: 5.5700,
+    longitude: -0.2200,
+    route: 'Kaneshie → Circle',
+    availableSeats: 3,
+  },
+];
+
+// ==================================================
+// DEFAULT LOCATION
+// ==================================================
+
+const DEFAULT_LATITUDE = 5.6037;
+const DEFAULT_LONGITUDE = -0.1870;
+
+// ==================================================
+// SCREEN
+// ==================================================
+
+export default function PassengerDashboard({
+  navigation,
+}: any) {
+  // ------------------------------------------------
+  // USER
+  // ------------------------------------------------
+
+  const user = useAppSelector(
+    (state: any) => state.auth.user
+  );
+
+  const userName = user?.name || 'Passenger';
+
+  // ------------------------------------------------
+  // LOCATION
+  // ------------------------------------------------
+
+  const [location, setLocation] =
+    useState<Location.LocationObject | null>(null);
+
+  const [locationLoading, setLocationLoading] =
+    useState(true);
+
+  // ------------------------------------------------
+  // TRO-TROS
+  // ------------------------------------------------
+
+  const [selectedTroTro, setSelectedTroTro] =
+    useState<TroTro | null>(null);
+
+  const [troTros] =
+    useState<TroTro[]>(initialTroTros);
+
+  // ------------------------------------------------
+  // CAMERA
+  // ------------------------------------------------
+
+  // MapLibre v11 exposes camera methods through
+  // the Camera ref.
+  //
+  // Using any here avoids TypeScript problems with
+  // the internal CameraRef type while retaining
+  // the native camera methods.
+
+  const cameraRef = useRef<any>(null);
+
+  // ==================================================
+  // GET LOCATION
+  // ==================================================
+
+  useEffect(() => {
+    let mounted = true;
+
+    const getLocation = async () => {
+      try {
+        const { status } =
+          await Location.requestForegroundPermissionsAsync();
+
+        if (status !== 'granted') {
+          Alert.alert(
+            'Location Permission',
+            'FLAP needs your location to show nearby tro-tros.'
+          );
+
+          if (mounted) {
+            setLocationLoading(false);
+          }
+
+          return;
+        }
+
+        const currentLocation =
+          await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.High,
+          });
+
+        if (mounted) {
+          setLocation(currentLocation);
+        }
+      } catch (error) {
+        console.error(
+          'Location error:',
+          error
+        );
+
+        if (mounted) {
+          Alert.alert(
+            'Location Error',
+            'We could not get your current location. Please try again.'
+          );
+        }
+      } finally {
+        if (mounted) {
+          setLocationLoading(false);
+        }
+      }
+    };
+
+    getLocation();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // ==================================================
+  // MAP CENTER
+  // ==================================================
+
+  const mapLatitude =
+    location?.coords?.latitude ??
+    DEFAULT_LATITUDE;
+
+  const mapLongitude =
+    location?.coords?.longitude ??
+    DEFAULT_LONGITUDE;
+
+  // ==================================================
+  // CENTER ON USER
+  // ==================================================
+
+  const centerOnUser = () => {
+    if (!location) {
+      Alert.alert(
+        'Location unavailable',
+        'Your current location is not available yet.'
+      );
+
+      return;
+    }
+
+    cameraRef.current?.flyTo(
+      [
+        location.coords.longitude,
+        location.coords.latitude,
+      ],
+      800
+    );
+  };
+
+  // ==================================================
+  // TRO-TRO MARKER
+  // ==================================================
+
+  const renderTroTroMarker = (
+    troTro: TroTro
+  ) => {
+    return (
+      <ViewAnnotation
+        key={`trotro-${troTro.id}`}
+        id={`trotro-${troTro.id}`}
+        lngLat={[
+          troTro.longitude,
+          troTro.latitude,
+        ]}
+        onSelect={() => {
+          setSelectedTroTro(troTro);
+        }}
+      >
+        <View style={styles.markerContainer}>
+          <View style={styles.trotroMarker}>
+            <Text style={styles.markerEmoji}>
+              🚌
+            </Text>
+          </View>
+        </View>
+      </ViewAnnotation>
+    );
+  };
+
+  // ==================================================
+  // PASSENGER LOCATION MARKER
+  // ==================================================
+
+  const renderUserMarker = () => {
+    if (!location) {
+      return null;
+    }
+
+    return (
+      <ViewAnnotation
+        id="passenger-location"
+        lngLat={[
+          location.coords.longitude,
+          location.coords.latitude,
+        ]}
+      >
+        <View style={styles.userMarker}>
+          <View style={styles.userMarkerDot} />
+        </View>
+      </ViewAnnotation>
+    );
+  };
+
+  // ==================================================
+  // SCREEN
+  // ==================================================
+
+  return (
+    <View style={styles.container}>
+
+      {/* HEADER */}
+
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.welcome}>
+            Welcome back
+          </Text>
+
+          <Text style={styles.name}>
+            {userName}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() =>
+            navigation.navigate('Profile')
+          }
+        >
+          <Text style={styles.profileText}>
+            👤
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* SEARCH */}
+
+      <View style={styles.searchContainer}>
+        <TouchableOpacity
+          style={styles.searchBox}
+          onPress={() =>
+            navigation.navigate('Search')
+          }
+        >
+          <Text style={styles.searchIcon}>
+            🔍
+          </Text>
+
+          <Text style={styles.searchPlaceholder}>
+            Where are you going?
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* MAP */}
+
+      <View style={styles.mapContainer}>
+
+        {locationLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" />
+
+            <Text style={styles.loadingText}>
+              Finding your location...
+            </Text>
+          </View>
+        ) : (
+          <Map
+            style={styles.map}
+            mapStyle={MAP_STYLE}
+          >
+
+            {/* CAMERA */}
+
+            <Camera
+              ref={cameraRef}
+              zoom={12}
+              initialViewState={{
+                center: [
+                  mapLongitude,
+                  mapLatitude,
+                ],
+                zoom: 12,
+              }}
+            />
+
+            {/* PASSENGER */}
+
+            {renderUserMarker()}
+
+            {/* TRO-TROS */}
+
+            {troTros.map(
+              renderTroTroMarker
+            )}
+
+          </Map>
+        )}
+
+        {/* LOCATION BUTTON */}
+
+        <TouchableOpacity
+          style={styles.locationButton}
+          onPress={centerOnUser}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.locationButtonText}>
+            ◎
+          </Text>
+        </TouchableOpacity>
+
+      </View>
+
+      {/* SELECTED TRO-TRO */}
+
+      {selectedTroTro && (
+        <View style={styles.trotroCard}>
+
+          <View style={styles.cardTop}>
+
+            <View>
+              <Text style={styles.trotroName}>
+                {selectedTroTro.name}
+              </Text>
+
+              <Text style={styles.routeText}>
+                {selectedTroTro.route}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() =>
+                setSelectedTroTro(null)
+              }
+            >
+              <Text style={styles.closeText}>
+                ✕
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+
+          <View style={styles.infoRow}>
+
+            <Text style={styles.seatText}>
+              🪑 {selectedTroTro.availableSeats}{' '}
+              seats available
+            </Text>
+
+            <Text style={styles.liveText}>
+              ● LIVE
+            </Text>
+
+          </View>
+
+          <TouchableOpacity
+            style={styles.requestButton}
+            onPress={() => {
+              Alert.alert(
+                'Tro-Tro Selected',
+                `You selected ${selectedTroTro.name}.`
+              );
+            }}
+          >
+            <Text
+              style={styles.requestButtonText}
+            >
+              Request Ride
+            </Text>
+          </TouchableOpacity>
+
+        </View>
+      )}
+
+      {/* BOTTOM ACTIONS */}
+
+      {!selectedTroTro && (
+        <View style={styles.bottomPanel}>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() =>
+              navigation.navigate('MyTrips')
+            }
+          >
+            <Text style={styles.actionIcon}>
+              🚌
+            </Text>
+
+            <Text style={styles.actionText}>
+              My Trips
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() =>
+              navigation.navigate('Favorites')
+            }
+          >
+            <Text style={styles.actionIcon}>
+              ⭐
+            </Text>
+
+            <Text style={styles.actionText}>
+              Favorites
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() =>
+              navigation.navigate(
+                'Notifications'
+              )
+            }
+          >
+            <Text style={styles.actionIcon}>
+              🔔
+            </Text>
+
+            <Text style={styles.actionText}>
+              Alerts
+            </Text>
+          </TouchableOpacity>
+
+        </View>
+      )}
+
+    </View>
+  );
+}
+
+// ==================================================
+// STYLES
+// ==================================================
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F4F8FB',
+  },
+
+  header: {
+    paddingTop:
+      Platform.OS === 'ios' ? 55 : 35,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  welcome: {
+    fontSize: 14,
+    color: '#777',
+  },
+
+  name: {
+    fontSize: 23,
+    fontWeight: 'bold',
+    color: '#0D47A1',
+    marginTop: 2,
+  },
+
+  profileButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E3F2FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  profileText: {
+    fontSize: 22,
+  },
+
+  searchContainer: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+  },
+
+  searchBox: {
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: '#F1F3F5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+  },
+
+  searchIcon: {
+    fontSize: 19,
+    marginRight: 10,
+  },
+
+  searchPlaceholder: {
+    color: '#777',
+    fontSize: 15,
+  },
+
+  mapContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+
+  map: {
+    flex: 1,
+  },
+
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EAF2F8',
+  },
+
+  loadingText: {
+    marginTop: 10,
+    color: '#555',
+  },
+
+  markerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  trotroMarker: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#1565C0',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+
+    elevation: 5,
+  },
+
+  markerEmoji: {
+    fontSize: 23,
+  },
+
+  userMarker: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor:
+      'rgba(33, 150, 243, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#2196F3',
+  },
+
+  userMarkerDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2196F3',
+  },
+
+  locationButton: {
+    position: 'absolute',
+    right: 18,
+    bottom: 18,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+  },
+
+  locationButtonText: {
+    fontSize: 30,
+    color: '#1565C0',
+  },
+
+  trotroCard: {
+    position: 'absolute',
+    left: 15,
+    right: 15,
+    bottom: 15,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 18,
+    elevation: 8,
+
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+  },
+
+  cardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+
+  trotroName: {
+    fontSize: 19,
+    fontWeight: 'bold',
+    color: '#0D47A1',
+  },
+
+  routeText: {
+    marginTop: 4,
+    color: '#666',
+    fontSize: 14,
+  },
+
+  closeText: {
+    fontSize: 20,
+    color: '#777',
+  },
+
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 15,
+  },
+
+  seatText: {
+    color: '#444',
+    fontSize: 14,
+  },
+
+  liveText: {
+    color: '#00A859',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+
+  requestButton: {
+    marginTop: 15,
+    backgroundColor: '#1565C0',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+
+  requestButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+
+  bottomPanel: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    borderTopColor: '#EEEEEE',
+  },
+
+  actionButton: {
+    alignItems: 'center',
+    minWidth: 80,
+  },
+
+  actionIcon: {
+    fontSize: 21,
+    marginBottom: 4,
+  },
+
+  actionText: {
+    fontSize: 12,
+    color: '#555',
+  },
+});
