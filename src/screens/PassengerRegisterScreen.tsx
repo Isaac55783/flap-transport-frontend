@@ -171,18 +171,10 @@ export default function PassengerRegisterScreen({ navigation }: any) {
             return;
           }
 
-          // ---------------------------------------
-          // PHONE BELONGS TO ADMIN
-          // ---------------------------------------
+          
 
-          if (existingRole === 'admin') {
-            Alert.alert(
-              'Account Already Exists',
-              'This phone number is registered as an administrator account. Please use the appropriate login.'
-            );
-
-            return;
-          }
+            
+    
 
           // ---------------------------------------
           // PHONE BELONGS TO PASSENGER
@@ -285,9 +277,7 @@ export default function PassengerRegisterScreen({ navigation }: any) {
         if (registeredRole === 'driver') {
           message =
             'This phone number is registered as a driver. Please use the driver login.';
-        } else if (registeredRole === 'admin') {
-          message =
-            'This phone number is registered as an administrator account.';
+        
         } else {
           message =
             'This phone number cannot be used for passenger login.';

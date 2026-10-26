@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import { store } from '../store';
 
 const BASE_URL = 'https://flap-transport.onrender.com';
-
+console.log('FLAP API BASE URL:', BASE_URL);
 const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
@@ -54,58 +54,47 @@ apiClient.interceptors.response.use(
 // =========================================================
 
 const apiService = {
-
   // =======================================================
   // AUTHENTICATION
   // =======================================================
 
-  login: async (
-    phoneNumber: string,
-    role: string
-  ) => {
+  login: async (phoneNumber: string, role: string) => {
     const response = await apiClient.post(
       '/api/auth/login',
       {
         phone_number: phoneNumber,
         role,
+      },
+      {
+        headers: {
+          // This header only requests the temporary test OTP response.
+          // The backend also requires WEB_OTP_TESTING=true in its environment.
+          'X-Web-Test-Mode': Platform.OS === 'web' ? 'true' : 'false',
+        },
       }
     );
 
     return response.data;
   },
 
-  verify: async (
-    phoneNumber: string,
-    otp: string,
-    role: string
-  ) => {
-    const response = await apiClient.post(
-      '/api/auth/verify',
-      {
-        phone_number: phoneNumber,
-        otp_code: otp,
-        role,
-      }
-    );
+  verify: async (phoneNumber: string, otp: string, role: string) => {
+    const response = await apiClient.post('/api/auth/verify', {
+      phone_number: phoneNumber,
+      otp_code: otp,
+      role,
+    });
 
     return response.data;
   },
 
   // Kept for compatibility with any existing screen.
   // The actual backend verification endpoint is /verify.
-  verifyOtp: async (
-    phoneNumber: string,
-    otp: string,
-    role: string
-  ) => {
-    const response = await apiClient.post(
-      '/api/auth/verify',
-      {
-        phone_number: phoneNumber,
-        otp_code: otp,
-        role,
-      }
-    );
+  verifyOtp: async (phoneNumber: string, otp: string, role: string) => {
+    const response = await apiClient.post('/api/auth/verify', {
+      phone_number: phoneNumber,
+      otp_code: otp,
+      role,
+    });
 
     return response.data;
   },
@@ -114,17 +103,11 @@ const apiService = {
   // REGISTRATION
   // =======================================================
 
-  registerPassenger: async (
-    name: string,
-    phoneNumber: string
-  ) => {
-    const response = await apiClient.post(
-      '/api/registration/passenger',
-      {
-        name,
-        phone_number: phoneNumber,
-      }
-    );
+  registerPassenger: async (name: string, phoneNumber: string) => {
+    const response = await apiClient.post('/api/registration/passenger', {
+      name,
+      phone_number: phoneNumber,
+    });
 
     return response.data;
   },
@@ -138,11 +121,7 @@ const apiService = {
     plate_number: string;
     capacity?: number;
   }) => {
-    const response = await apiClient.post(
-      '/api/registration/driver',
-      data
-    );
-
+    const response = await apiClient.post('/api/registration/driver', data);
     return response.data;
   },
 
@@ -155,39 +134,26 @@ const apiService = {
     current_station_id?: number,
     available_seats: number = 15
   ) => {
-    const response = await apiClient.post(
-      '/api/trips/start',
-      {
-        route_id,
-        current_station_id,
-        available_seats,
-      }
-    );
-
+    const response = await apiClient.post('/api/trips/start', {
+      route_id,
+      current_station_id,
+      available_seats,
+    });
     return response.data;
   },
 
   pauseTrip: async () => {
-    const response = await apiClient.post(
-      '/api/trips/pause'
-    );
-
+    const response = await apiClient.post('/api/trips/pause');
     return response.data;
   },
 
   resumeTrip: async () => {
-    const response = await apiClient.post(
-      '/api/trips/resume'
-    );
-
+    const response = await apiClient.post('/api/trips/resume');
     return response.data;
   },
 
   endTrip: async () => {
-    const response = await apiClient.post(
-      '/api/trips/end'
-    );
-
+    const response = await apiClient.post('/api/trips/end');
     return response.data;
   },
 
@@ -195,14 +161,10 @@ const apiService = {
     available_seats: number,
     occupancy?: 'empty' | 'half-full' | 'full'
   ) => {
-    const response = await apiClient.post(
-      '/api/trips/update_seats',
-      {
-        available_seats,
-        occupancy,
-      }
-    );
-
+    const response = await apiClient.post('/api/trips/update_seats', {
+      available_seats,
+      occupancy,
+    });
     return response.data;
   },
 
@@ -215,13 +177,9 @@ const apiService = {
       | 'break'
       | 'emergency'
   ) => {
-    const response = await apiClient.post(
-      '/api/trips/update_status',
-      {
-        status,
-      }
-    );
-
+    const response = await apiClient.post('/api/trips/update_status', {
+      status,
+    });
     return response.data;
   },
 
@@ -231,16 +189,12 @@ const apiService = {
     dest_lat: number,
     dest_lng: number
   ) => {
-    const response = await apiClient.post(
-      '/api/trips/match',
-      {
-        current_lat,
-        current_lng,
-        dest_lat,
-        dest_lng,
-      }
-    );
-
+    const response = await apiClient.post('/api/trips/match', {
+      current_lat,
+      current_lng,
+      dest_lat,
+      dest_lng,
+    });
     return response.data;
   },
 
@@ -256,28 +210,19 @@ const apiService = {
     speed?: number;
     direction?: number;
   }) => {
-    const response = await apiClient.post(
-      '/api/gps/log',
-      {
-        driver_id: payload.driver_id,
-        trip_id: payload.trip_id ?? null,
-        latitude: payload.latitude,
-        longitude: payload.longitude,
-        speed: payload.speed ?? 0,
-        direction: payload.direction ?? 0,
-      }
-    );
-
+    const response = await apiClient.post('/api/gps/log', {
+      driver_id: payload.driver_id,
+      trip_id: payload.trip_id ?? null,
+      latitude: payload.latitude,
+      longitude: payload.longitude,
+      speed: payload.speed ?? 0,
+      direction: payload.direction ?? 0,
+    });
     return response.data;
   },
 
-  getTripReplay: async (
-    trip_id: number
-  ) => {
-    const response = await apiClient.get(
-      `/api/gps/replay/${trip_id}`
-    );
-
+  getTripReplay: async (trip_id: number) => {
+    const response = await apiClient.get(`/api/gps/replay/${trip_id}`);
     return response.data;
   },
 
@@ -286,69 +231,39 @@ const apiService = {
   // =======================================================
 
   getAdminStats: async () => {
-    const response = await apiClient.get(
-      '/api/admin/stats'
-    );
-
+    const response = await apiClient.get('/api/admin/stats');
     return response.data;
   },
 
   getPendingDrivers: async () => {
-    const response = await apiClient.get(
-      '/api/admin/drivers/pending'
-    );
-
+    const response = await apiClient.get('/api/admin/drivers/pending');
     return response.data;
   },
 
   getReports: async () => {
-    const response = await apiClient.get(
-      '/api/reports'
-    );
-
+    const response = await apiClient.get('/api/reports');
     return response.data;
   },
 
-  verifyDriver: async (
-    driverId: number,
-    status: 'verified' | 'rejected'
-  ) => {
-    const response = await apiClient.put(
-      `/api/admin/drivers/${driverId}/verify`,
-      {
-        status,
-      }
-    );
-
+  verifyDriver: async (driverId: number, status: 'verified' | 'rejected') => {
+    const response = await apiClient.put(`/api/admin/drivers/${driverId}/verify`, {
+      status,
+    });
     return response.data;
   },
 
-  banUser: async (
-    userId: number,
-    status: 'active' | 'banned'
-  ) => {
-    const response = await apiClient.put(
-      `/api/admin/users/${userId}/ban`,
-      {
-        status,
-      }
-    );
-
+  banUser: async (userId: number, status: 'active' | 'banned') => {
+    const response = await apiClient.put(`/api/admin/users/${userId}/ban`, {
+      status,
+    });
     return response.data;
   },
 
-  broadcastAnnouncement: async (
-    title: string,
-    message: string
-  ) => {
-    const response = await apiClient.post(
-      '/api/admin/broadcast',
-      {
-        title,
-        message,
-      }
-    );
-
+  broadcastAnnouncement: async (title: string, message: string) => {
+    const response = await apiClient.post('/api/admin/broadcast', {
+      title,
+      message,
+    });
     return response.data;
   },
 
@@ -356,62 +271,26 @@ const apiService = {
   // GENERIC REQUEST HELPERS
   // =======================================================
 
-  get: async (
-    url: string,
-    config?: any
-  ) => {
-    const response = await apiClient.get(
-      url,
-      config
-    );
-
+  get: async (url: string, config?: any) => {
+    const response = await apiClient.get(url, config);
     return response.data;
   },
 
-  post: async (
-    url: string,
-    data?: any,
-    config?: any
-  ) => {
-    const response = await apiClient.post(
-      url,
-      data,
-      config
-    );
-
+  post: async (url: string, data?: any, config?: any) => {
+    const response = await apiClient.post(url, data, config);
     return response.data;
   },
 
-  put: async (
-    url: string,
-    data?: any,
-    config?: any
-  ) => {
-    const response = await apiClient.put(
-      url,
-      data,
-      config
-    );
-
+  put: async (url: string, data?: any, config?: any) => {
+    const response = await apiClient.put(url, data, config);
     return response.data;
   },
 
-  delete: async (
-    url: string,
-    config?: any
-  ) => {
-    const response = await apiClient.delete(
-      url,
-      config
-    );
-
+  delete: async (url: string, config?: any) => {
+    const response = await apiClient.delete(url, config);
     return response.data;
   },
 };
-
-// =========================================================
-// EXPORTS
-// =========================================================
 
 export { apiService };
 export default apiService;

@@ -1,361 +1,332 @@
-import React, { useState } from 'react';
-
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  ScrollView,
+  useWindowDimensions,
 } from 'react-native';
+import { useAppDispatch } from '../store';
+import { setRole } from '../store/authSlice';
 
+type UserRole = 'passenger' | 'driver';
 
 export default function AuthChoiceScreen({
   navigation,
+  route,
 }: any) {
+  const dispatch = useAppDispatch();
+  const { width } = useWindowDimensions();
 
-  const [selectedRole, setSelectedRole] = useState<
-    'passenger' | 'driver' | null
-  >(null);
+  const incomingRole = route?.params?.role;
+  const validIncomingRole: UserRole | null =
+    incomingRole === 'passenger' || incomingRole === 'driver'
+      ? incomingRole
+      : null;
 
+  const [selectedRole, setSelectedRole] =
+    useState<UserRole | null>(validIncomingRole);
 
-  // =====================================================
-  // SELECT ROLE
-  // =====================================================
+  const [showRolePicker, setShowRolePicker] =
+    useState(!validIncomingRole);
 
-  const handleRoleSelect = (
-    role: 'passenger' | 'driver'
-  ) => {
+  useEffect(() => {
+    if (validIncomingRole) {
+      setSelectedRole(validIncomingRole);
+      dispatch(setRole(validIncomingRole));
+      setShowRolePicker(false);
+    }
+  }, [validIncomingRole, dispatch]);
 
+  const handleRoleSelect = (role: UserRole) => {
     setSelectedRole(role);
-
+    dispatch(setRole(role));
+    setShowRolePicker(false);
   };
-
-
-  // =====================================================
-  // CREATE ACCOUNT
-  // =====================================================
 
   const handleCreateAccount = () => {
+    if (!selectedRole) return;
 
-    if (!selectedRole) {
-      return;
-    }
+    dispatch(setRole(selectedRole));
 
     if (selectedRole === 'passenger') {
-
-      navigation.navigate(
-        'PassengerRegister'
-      );
-
+      navigation.navigate('PassengerRegister', {
+        role: selectedRole,
+      });
     } else {
-
-      navigation.navigate(
-        'DriverRegister'
-      );
-
+      navigation.navigate('DriverRegister', {
+        role: selectedRole,
+      });
     }
-
   };
-
-
-  // =====================================================
-  // SIGN IN
-  // =====================================================
 
   const handleSignIn = () => {
+    if (!selectedRole) return;
 
-    if (!selectedRole) {
-      return;
-    }
+    dispatch(setRole(selectedRole));
 
-    navigation.navigate(
-      'Login',
-      {
-        role: selectedRole,
-      }
-    );
-
+    navigation.navigate('Login', {
+      role: selectedRole,
+    });
   };
 
-
-  // =====================================================
-  // SCREEN
-  // =====================================================
+  const roleName =
+    selectedRole === 'passenger' ? 'Passenger' : 'Driver';
 
   return (
-
     <SafeAreaView style={styles.container}>
-
-      {/* BACK BUTTON */}
-
-      <TouchableOpacity
-        onPress={() => navigation.goBack()}
-        style={styles.backButton}
-      >
-
-        <Text style={styles.backText}>
-          ← Back
-        </Text>
-
-      </TouchableOpacity>
-
-
-      {/* TITLE */}
-
-      <Text style={styles.title}>
-        Choose Your Role
-      </Text>
-
-
-      <Text style={styles.subtitle}>
-        Select how you want to use Flap Transport
-      </Text>
-
-
-      {/* PASSENGER */}
-
-      <TouchableOpacity
-        style={[
-          styles.card,
-          selectedRole === 'passenger' &&
-            styles.selectedCard,
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingHorizontal: width < 380 ? 16 : 24 },
         ]}
-        onPress={() =>
-          handleRoleSelect('passenger')
-        }
-        activeOpacity={0.8}
+        keyboardShouldPersistTaps="handled"
       >
-
-        <Text style={styles.cardTitle}>
-          Passenger
-        </Text>
-
-        <Text style={styles.cardDescription}>
-          Book rides and travel easily.
-        </Text>
-
-
-        {selectedRole === 'passenger' && (
-
-          <Text style={styles.selectedText}>
-            ✓ Passenger selected
-          </Text>
-
-        )}
-
-      </TouchableOpacity>
-
-
-      {/* DRIVER */}
-
-      <TouchableOpacity
-        style={[
-          styles.card,
-          selectedRole === 'driver' &&
-            styles.selectedCard,
-        ]}
-        onPress={() =>
-          handleRoleSelect('driver')
-        }
-        activeOpacity={0.8}
-      >
-
-        <Text style={styles.cardTitle}>
-          Driver
-        </Text>
-
-        <Text style={styles.cardDescription}>
-          Register your vehicle and receive
-          passengers.
-        </Text>
-
-
-        {selectedRole === 'driver' && (
-
-          <Text style={styles.selectedText}>
-            ✓ Driver selected
-          </Text>
-
-        )}
-
-      </TouchableOpacity>
-
-
-      {/* CREATE ACCOUNT */}
-
-      {selectedRole && (
-
         <TouchableOpacity
-          style={styles.createButton}
-          onPress={handleCreateAccount}
-          activeOpacity={0.8}
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
         >
-
-          <Text style={styles.createText}>
-            Create {selectedRole === 'passenger'
-              ? 'Passenger'
-              : 'Driver'} Account
-          </Text>
-
+          <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
 
-      )}
-
-
-      {/* SIGN IN */}
-
-      {selectedRole && (
-
-        <View style={styles.signInContainer}>
-
-          <Text style={styles.signInQuestion}>
-            Already have an account?
+        <View style={styles.content}>
+          <Text style={styles.title}>
+            Welcome to Flap Transport
           </Text>
 
+          <Text style={styles.subtitle}>
+            Sign in to your account or create a new one.
+          </Text>
 
-          <TouchableOpacity
-            onPress={handleSignIn}
-            activeOpacity={0.7}
-          >
+          {selectedRole && !showRolePicker ? (
+            <View style={styles.selectedRoleCard}>
+              <Text style={styles.roleLabel}>
+                YOUR SELECTED ROLE
+              </Text>
 
-            <Text style={styles.loginText}>
-              Sign In as {selectedRole === 'passenger'
-                ? 'Passenger'
-                : 'Driver'}
-            </Text>
+              <Text style={styles.selectedRoleTitle}>
+                {roleName}
+              </Text>
 
-          </TouchableOpacity>
+              <Text style={styles.roleDescription}>
+                {selectedRole === 'passenger'
+                  ? 'Book rides and travel easily.'
+                  : 'Register your vehicle and receive passengers.'}
+              </Text>
 
+              <TouchableOpacity
+                onPress={() => setShowRolePicker(true)}
+                style={styles.changeRoleButton}
+                accessibilityRole="button"
+              >
+                <Text style={styles.changeRoleText}>
+                  Change role
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View>
+              <Text style={styles.sectionTitle}>
+                Choose your role
+              </Text>
+
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => handleRoleSelect('passenger')}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+              >
+                <Text style={styles.cardTitle}>Passenger</Text>
+                <Text style={styles.cardDescription}>
+                  Book rides and travel easily.
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => handleRoleSelect('driver')}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+              >
+                <Text style={styles.cardTitle}>Driver</Text>
+                <Text style={styles.cardDescription}>
+                  Register your vehicle and receive passengers.
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {selectedRole && (
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.createButton}
+                onPress={handleCreateAccount}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+              >
+                <Text style={styles.createText}>
+                  Create {roleName} Account
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.signInContainer}>
+                <Text style={styles.signInQuestion}>
+                  Already have an account?
+                </Text>
+
+                <TouchableOpacity
+                  onPress={handleSignIn}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.loginText}>
+                    Sign In as {roleName}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
-
-      )}
-
+      </ScrollView>
     </SafeAreaView>
-
   );
-
 }
 
-
-// =====================================================
-// STYLES
-// =====================================================
-
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     backgroundColor: '#F4F8FB',
-    padding: 24,
-    justifyContent: 'center',
   },
-
-
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: 32,
+  },
+  content: {
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+  },
   backButton: {
     position: 'absolute',
-    top: 60,
+    top: 12,
     left: 20,
     zIndex: 10,
+    padding: 8,
   },
-
-
   backText: {
     fontSize: 16,
     color: '#1565C0',
     fontWeight: '600',
   },
-
-
   title: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: 'bold',
     textAlign: 'center',
     color: '#0D47A1',
     marginBottom: 10,
   },
-
-
   subtitle: {
     textAlign: 'center',
     color: '#666',
-    marginBottom: 35,
+    marginBottom: 28,
     fontSize: 16,
+    lineHeight: 23,
   },
-
-
+  sectionTitle: {
+    color: '#263238',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  selectedRoleCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#D8E5EF',
+    elevation: 3,
+  },
+  roleLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    color: '#64748B',
+    marginBottom: 8,
+  },
+  selectedRoleTitle: {
+    color: '#0D47A1',
+    fontSize: 26,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  roleDescription: {
+    color: '#52616B',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  changeRoleButton: {
+    alignSelf: 'flex-start',
+    marginTop: 18,
+    paddingVertical: 8,
+  },
+  changeRoleText: {
+    color: '#1565C0',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
   card: {
     backgroundColor: '#1565C0',
-    borderRadius: 18,
-    padding: 25,
-    marginBottom: 20,
-    elevation: 4,
-    borderWidth: 3,
-    borderColor: 'transparent',
+    borderRadius: 16,
+    padding: 22,
+    marginBottom: 16,
+    elevation: 3,
   },
-
-
-  selectedCard: {
-    borderColor: '#00A859',
-    backgroundColor: '#0D5CB8',
-  },
-
-
   cardTitle: {
-    color: 'white',
+    color: '#FFFFFF',
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 8,
   },
-
-
   cardDescription: {
-    color: 'white',
-    fontSize: 15,
-  },
-
-
-  selectedText: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginTop: 12,
+    fontSize: 15,
+    lineHeight: 22,
   },
-
-
+  actions: {
+    marginTop: 24,
+  },
   createButton: {
     backgroundColor: '#00A859',
     borderRadius: 12,
-    padding: 17,
-    marginTop: 5,
+    paddingVertical: 17,
+    paddingHorizontal: 12,
     alignItems: 'center',
   },
-
-
   createText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 17,
+    textAlign: 'center',
   },
-
-
   signInContainer: {
     marginTop: 22,
     alignItems: 'center',
   },
-
-
   signInQuestion: {
     color: '#666',
     fontSize: 15,
-    marginBottom: 5,
+    marginBottom: 8,
+    textAlign: 'center',
   },
-
-
   loginText: {
     color: '#1565C0',
     fontWeight: 'bold',
     fontSize: 17,
+    textAlign: 'center',
   },
-
 });
-

@@ -10,7 +10,7 @@ export default function WelcomeScreen({ navigation }: any) {
 
   const handleRoleSelect = (role: 'passenger' | 'driver' | 'admin') => {
     dispatch(setRole(role));
-    navigation.navigate('AuthChoice')
+    navigation.navigate('AuthChoice', { role })
   };
 
   return (
@@ -46,15 +46,7 @@ export default function WelcomeScreen({ navigation }: any) {
           I am a Driver
         </Button>
 
-        <Button 
-          mode="text" 
-          onPress={() => handleRoleSelect('admin')} 
-          style={styles.adminButton}
-          textColor={theme.colors.outline}
-          icon="shield-account"
-        >
-          System Administrator
-        </Button>
+        
       </Surface>
     </View>
   );
