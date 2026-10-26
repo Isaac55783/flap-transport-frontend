@@ -1,33 +1,45 @@
 import React from 'react';
-import { StyleSheet, View, Image } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Button, Text, Surface, useTheme } from 'react-native-paper';
 import { useAppDispatch } from '../store';
 import { setRole } from '../store/authSlice';
+
+type PublicRole = 'passenger' | 'driver';
 
 export default function WelcomeScreen({ navigation }: any) {
   const theme = useTheme();
   const dispatch = useAppDispatch();
 
-  const handleRoleSelect = (role: 'passenger' | 'driver' | 'admin') => {
+  const handleRoleSelect = (role: PublicRole) => {
     dispatch(setRole(role));
-    navigation.navigate('AuthChoice', { role })
+    navigation.navigate('AuthChoice', { role });
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.background },
+      ]}
+    >
       <Surface style={styles.card} elevation={2}>
         <View style={styles.header}>
-          <Text variant="headlineLarge" style={styles.title}>Flap Transport</Text>
+          <Text variant="headlineLarge" style={styles.title}>
+            Flap Transport
+          </Text>
+
           <Text variant="bodyLarge" style={styles.subtitle}>
             Ghana's Smart Real-Time Tro Tro Navigation System
           </Text>
         </View>
 
-        <Text variant="titleMedium" style={styles.choiceTitle}>Select Your Role</Text>
+        <Text variant="titleMedium" style={styles.choiceTitle}>
+          Select Your Role
+        </Text>
 
-        <Button 
-          mode="contained" 
-          onPress={() => handleRoleSelect('passenger')} 
+        <Button
+          mode="contained"
+          onPress={() => handleRoleSelect('passenger')}
           style={styles.button}
           contentStyle={styles.btnContent}
           icon="walk"
@@ -35,18 +47,19 @@ export default function WelcomeScreen({ navigation }: any) {
           I am a Passenger
         </Button>
 
-        <Button 
-          mode="contained" 
-          onPress={() => handleRoleSelect('driver')} 
-          style={[styles.button, { backgroundColor: theme.colors.primaryContainer }]}
+        <Button
+          mode="contained"
+          onPress={() => handleRoleSelect('driver')}
+          style={[
+            styles.button,
+            { backgroundColor: theme.colors.primaryContainer },
+          ]}
           textColor={theme.colors.onPrimaryContainer}
           contentStyle={styles.btnContent}
           icon="steering"
         >
           I am a Driver
         </Button>
-
-        
       </Surface>
     </View>
   );
@@ -92,7 +105,4 @@ const styles = StyleSheet.create({
   btnContent: {
     paddingVertical: 8,
   },
-  adminButton: {
-    marginTop: 10,
-  }
 });
