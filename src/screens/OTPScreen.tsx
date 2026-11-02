@@ -31,7 +31,7 @@ import {
 // Replace this with your actual Render FRONTEND domain.
 // Do not use your Flask backend domain here.
 const RENDER_FRONTEND_HOST =
-  'https://flap-transport-frontend.onrender.com';
+  'flap-transport-frontend.onrender.com';
 
 export default function OTPScreen({ route, navigation }: any) {
   const theme = useTheme();

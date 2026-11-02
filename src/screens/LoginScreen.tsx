@@ -111,7 +111,11 @@ export default function LoginScreen({
         // Development/testing only.
         // Remove this when your backend sends
         // OTP through SMS.
-        mockCode: response?.otp,
+        mockCode:
+  typeof window !== 'undefined' &&
+  window.location.hostname === 'flap-transport-frontend.onrender.com'
+    ? response?.otp
+    : undefined,
       });
 
     } catch (error: any) {
