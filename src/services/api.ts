@@ -4,11 +4,8 @@ import { store } from '../store';
 
 const BASE_URL = 'https://flap-transport.onrender.com';
 
-// Replace this with your actual Render FRONTEND hostname.
-// Do not use the backend hostname unless it is also your frontend.
-const RENDER_FRONTEND_HOST = 'https://flap-transport-frontend.onrender.com';
+const RENDER_FRONTEND_HOST = 'flap-transport-frontend.onrender.com';
 
-// Temporary OTP testing is enabled only on the deployed Render frontend.
 const IS_RENDER_FRONTEND =
   typeof window !== 'undefined' &&
   window.location.hostname.toLowerCase() ===
