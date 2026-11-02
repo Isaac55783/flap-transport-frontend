@@ -1,12 +1,25 @@
+
 import axios from 'axios';
-import { Platform } from 'react-native';
 import { store } from '../store';
 
 const BASE_URL = 'https://flap-transport.onrender.com';
+
+// Replace this with your actual Render FRONTEND hostname.
+// Do not use the backend hostname unless it is also your frontend.
+const RENDER_FRONTEND_HOST = 'YOUR-RENDER-FRONTEND.onrender.com';
+
+// Temporary OTP testing is enabled only on the deployed Render frontend.
+const IS_RENDER_FRONTEND =
+  typeof window !== 'undefined' &&
+  window.location.hostname.toLowerCase() ===
+    RENDER_FRONTEND_HOST.toLowerCase();
+
 console.log('FLAP API BASE URL:', BASE_URL);
+console.log('FLAP RENDER OTP TEST MODE:', IS_RENDER_FRONTEND);
+
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -67,9 +80,9 @@ const apiService = {
       },
       {
         headers: {
-          // This header only requests the temporary test OTP response.
-          // The backend also requires WEB_OTP_TESTING=true in its environment.
-          'X-Web-Test-Mode': Platform.OS === 'web' ? 'true' : 'false',
+          // Only the deployed Render frontend requests
+          // the temporary test OTP response.
+          'X-Web-Test-Mode': IS_RENDER_FRONTEND ? 'true' : 'false',
         },
       }
     );
@@ -87,7 +100,7 @@ const apiService = {
     return response.data;
   },
 
-  // Kept for compatibility with any existing screen.
+  // Kept for compatibility with existing screens.
   // The actual backend verification endpoint is /verify.
   verifyOtp: async (phoneNumber: string, otp: string, role: string) => {
     const response = await apiClient.post('/api/auth/verify', {
@@ -139,6 +152,7 @@ const apiService = {
       current_station_id,
       available_seats,
     });
+
     return response.data;
   },
 
@@ -165,6 +179,7 @@ const apiService = {
       available_seats,
       occupancy,
     });
+
     return response.data;
   },
 
@@ -180,6 +195,7 @@ const apiService = {
     const response = await apiClient.post('/api/trips/update_status', {
       status,
     });
+
     return response.data;
   },
 
@@ -195,6 +211,7 @@ const apiService = {
       dest_lat,
       dest_lng,
     });
+
     return response.data;
   },
 
@@ -218,6 +235,7 @@ const apiService = {
       speed: payload.speed ?? 0,
       direction: payload.direction ?? 0,
     });
+
     return response.data;
   },
 
@@ -246,16 +264,20 @@ const apiService = {
   },
 
   verifyDriver: async (driverId: number, status: 'verified' | 'rejected') => {
-    const response = await apiClient.put(`/api/admin/drivers/${driverId}/verify`, {
-      status,
-    });
+    const response = await apiClient.put(
+      `/api/admin/drivers/${driverId}/verify`,
+      { status }
+    );
+
     return response.data;
   },
 
   banUser: async (userId: number, status: 'active' | 'banned') => {
-    const response = await apiClient.put(`/api/admin/users/${userId}/ban`, {
-      status,
-    });
+    const response = await apiClient.put(
+      `/api/admin/users/${userId}/ban`,
+      { status }
+    );
+
     return response.data;
   },
 
@@ -264,6 +286,7 @@ const apiService = {
       title,
       message,
     });
+
     return response.data;
   },
 

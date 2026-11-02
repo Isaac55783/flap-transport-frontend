@@ -1,3 +1,4 @@
+
 import React, {
   useCallback,
   useEffect,
@@ -29,9 +30,12 @@ import {
   useAppDispatch,
 } from '../store';
 
-import { updateDriverStatus } from '../store/authSlice';
-import { setActiveTrip } from '../store/tripSlice';
+import {
+  updateDriverStatus,
+  logout,
+} from '../store/authSlice';
 
+import { setActiveTrip } from '../store/tripSlice';
 
 type LocationPoint = {
   latitude: number;
@@ -39,10 +43,8 @@ type LocationPoint = {
   address: string;
 };
 
-
 const NOMINATIM_URL =
   'https://nominatim.openstreetmap.org/search';
-
 
 const DriverDashboard = ({ navigation }: any) => {
   const dispatch = useAppDispatch();
@@ -61,11 +63,8 @@ const DriverDashboard = ({ navigation }: any) => {
       (state.auth as any).activeTrip
   );
 
-  const [setOffQuery, setSetOffQuery] =
-    useState('');
-
-  const [destinationQuery, setDestinationQuery] =
-    useState('');
+  const [setOffQuery, setSetOffQuery] = useState('');
+  const [destinationQuery, setDestinationQuery] = useState('');
 
   const [departurePoint, setDeparturePoint] =
     useState<LocationPoint | null>(null);
@@ -91,35 +90,25 @@ const DriverDashboard = ({ navigation }: any) => {
   const [selectedStationId, setSelectedStationId] =
     useState<number | null>(null);
 
-  const [availableSeats, setAvailableSeats] =
-    useState(15);
+  const [availableSeats, setAvailableSeats] = useState(15);
 
   const [occupancy, setOccupancy] =
-    useState<'empty' | 'half-full' | 'full'>(
-      'empty'
-    );
+    useState<'empty' | 'half-full' | 'full'>('empty');
 
   const [isSearchingSetOff, setIsSearchingSetOff] =
     useState(false);
 
-  const [
-    isSearchingDestination,
-    setIsSearchingDestination,
-  ] = useState(false);
-
-  const [isLoading, setIsLoading] =
+  const [isSearchingDestination, setIsSearchingDestination] =
     useState(false);
 
-  const [isBroadcasting, setIsBroadcasting] =
-    useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [tripPaused, setTripPaused] =
-    useState(false);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  const [tripPaused, setTripPaused] = useState(false);
 
   const gpsIntervalRef =
-    useRef<ReturnType<typeof setInterval> | null>(
-      null
-    );
+    useRef<ReturnType<typeof setInterval> | null>(null);
 
   const departurePointRef =
     useRef<LocationPoint | null>(null);
@@ -133,20 +122,15 @@ const DriverDashboard = ({ navigation }: any) => {
   const selectedStationIdRef =
     useRef<number | null>(null);
 
-  const availableSeatsRef =
-    useRef(availableSeats);
+  const availableSeatsRef = useRef(availableSeats);
+  const occupancyRef = useRef(occupancy);
+  const tripPausedRef = useRef(false);
 
-  const occupancyRef =
-    useRef(occupancy);
-
-  /*
-   * Small animated search icon used beside the
-   * Set-Off and Final Destination fields.
-   */
   const searchPulse = useRef(
     new Animated.Value(1)
   ).current;
 
+  // Animate the search icons.
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
@@ -172,51 +156,41 @@ const DriverDashboard = ({ navigation }: any) => {
     };
   }, [searchPulse]);
 
-
-  /*
-   * Keep refs synchronized with the latest state.
-   */
+  // Keep refs synchronized with state.
   useEffect(() => {
-    departurePointRef.current =
-      departurePoint;
+    departurePointRef.current = departurePoint;
   }, [departurePoint]);
 
   useEffect(() => {
-    destinationPointRef.current =
-      destinationPoint;
+    destinationPointRef.current = destinationPoint;
   }, [destinationPoint]);
 
   useEffect(() => {
-    selectedRouteIdRef.current =
-      selectedRouteId;
+    selectedRouteIdRef.current = selectedRouteId;
   }, [selectedRouteId]);
 
   useEffect(() => {
-    selectedStationIdRef.current =
-      selectedStationId;
+    selectedStationIdRef.current = selectedStationId;
   }, [selectedStationId]);
 
   useEffect(() => {
-    availableSeatsRef.current =
-      availableSeats;
+    availableSeatsRef.current = availableSeats;
   }, [availableSeats]);
 
   useEffect(() => {
-    occupancyRef.current =
-      occupancy;
+    occupancyRef.current = occupancy;
   }, [occupancy]);
 
+  useEffect(() => {
+    tripPausedRef.current = tripPaused;
+  }, [tripPaused]);
 
-  /*
-   * Connect to Socket.IO when the dashboard opens.
-   */
+  // Connect to Socket.IO when the dashboard opens.
   useEffect(() => {
     socketService
       .connect()
       .then(() => {
-        console.log(
-          'Driver Dashboard Socket.IO connected'
-        );
+        console.log('Driver Dashboard Socket.IO connected');
       })
       .catch((error) => {
         console.error(
@@ -227,19 +201,13 @@ const DriverDashboard = ({ navigation }: any) => {
 
     return () => {
       if (gpsIntervalRef.current) {
-        clearInterval(
-          gpsIntervalRef.current
-        );
-
+        clearInterval(gpsIntervalRef.current);
         gpsIntervalRef.current = null;
       }
     };
   }, []);
 
-
-  /*
-   * Search Ghana locations using Nominatim.
-   */
+  // Search Ghana locations using OpenStreetMap Nominatim.
   const searchLocation = async (
     query: string,
     type: 'setoff' | 'destination'
@@ -250,7 +218,6 @@ const DriverDashboard = ({ navigation }: any) => {
       } else {
         setDestinationResults([]);
       }
-
       return;
     }
 
@@ -264,14 +231,11 @@ const DriverDashboard = ({ navigation }: any) => {
       const url =
         `${NOMINATIM_URL}?format=jsonv2` +
         `&q=${encodeURIComponent(query + ', Ghana')}` +
-        `&countrycodes=gh` +
-        `&limit=5`;
+        `&countrycodes=gh&limit=5`;
 
       const response = await fetch(url, {
         headers: {
           Accept: 'application/json',
-          'User-Agent':
-            'FLAP-Transport-Ghana/1.0',
         },
       });
 
@@ -283,15 +247,14 @@ const DriverDashboard = ({ navigation }: any) => {
 
       const data = await response.json();
 
-      const results: LocationPoint[] =
-        data.map((item: any) => ({
+      const results: LocationPoint[] = data.map(
+        (item: any) => ({
           latitude: parseFloat(item.lat),
           longitude: parseFloat(item.lon),
           address:
-            item.display_name ||
-            item.name ||
-            query,
-        }));
+            item.display_name || item.name || query,
+        })
+      );
 
       if (type === 'setoff') {
         setSetOffResults(results);
@@ -299,10 +262,7 @@ const DriverDashboard = ({ navigation }: any) => {
         setDestinationResults(results);
       }
     } catch (error) {
-      console.error(
-        'Location search error:',
-        error
-      );
+      console.error('Location search error:', error);
 
       Alert.alert(
         'Search Error',
@@ -317,188 +277,122 @@ const DriverDashboard = ({ navigation }: any) => {
     }
   };
 
-
-  /*
-   * Select Set-Off point.
-   */
-  const selectSetOffPoint = (
-    location: LocationPoint
-  ) => {
+  // Select Set-Off point.
+  const selectSetOffPoint = (location: LocationPoint) => {
     setDeparturePoint(location);
     departurePointRef.current = location;
 
     setSetOffQuery(location.address);
     setSetOffResults([]);
 
-    /*
-     * Initialize the TroTro position at the
-     * selected set-off point.
-     */
     setDriverLocation({
       latitude: location.latitude,
       longitude: location.longitude,
     });
-
-    console.log(
-      'Driver set-off point selected:',
-      location
-    );
   };
 
-
-  /*
-   * Select final destination.
-   */
+  // Select final destination.
   const selectDestinationPoint = (
     location: LocationPoint
   ) => {
     setDestinationPoint(location);
-    destinationPointRef.current =
-      location;
+    destinationPointRef.current = location;
 
     setDestinationQuery(location.address);
     setDestinationResults([]);
-
-    console.log(
-      'Driver destination selected:',
-      location
-    );
   };
 
-
-  /*
-   * Find a route connecting the selected
-   * driver set-off and destination.
-   *
-   * The existing backend route system is used
-   * for the trip record.
-   */
+  // Find a matching backend route.
   const handleSetRoute = async () => {
-    if (!departurePoint) {
+    if (!departurePointRef.current) {
       Alert.alert(
         'Set-Off Point Required',
         'Please select your set-off point first.'
       );
-
       return;
     }
 
-    if (!destinationPoint) {
+    if (!destinationPointRef.current) {
       Alert.alert(
         'Destination Required',
         'Please select your final destination first.'
       );
-
       return;
     }
 
     try {
       setIsLoading(true);
 
-      /*
-       * Ask backend for routes that match the
-       * driver's selected destination.
-       */
-      const response =
-        await apiService.get(
-          '/api/routes'
-        );
+      const response = await apiService.get('/api/routes');
 
-      const routes =
-        Array.isArray(response)
-          ? response
-          : response?.routes || [];
+      const routes = Array.isArray(response)
+        ? response
+        : response?.routes || [];
 
       if (!routes.length) {
-        /*
-         * The visual route can still be displayed
-         * by DriverMap even when there is no exact
-         * backend route record.
-         */
-        console.warn(
-          'No backend routes returned.'
-        );
-
         setSelectedRouteId(null);
+        selectedRouteIdRef.current = null;
+
         setSelectedStationId(null);
+        selectedStationIdRef.current = null;
 
         Alert.alert(
-          'Route Set',
-          'Your Set-Off and Final Destination have been set on the map.'
+          'No Routes Found',
+          'The selected locations are visible on the map, but no matching backend route was found.'
         );
-
         return;
       }
 
-      /*
-       * Try to find a route whose origin/destination
-       * is geographically closest to the selected
-       * driver locations.
-       */
       let bestRoute: any = null;
       let bestScore = Number.POSITIVE_INFINITY;
 
       for (const route of routes) {
-        const originLat =
-          Number(route.origin_latitude);
+        const originLat = Number(route.origin_latitude);
+        const originLng = Number(route.origin_longitude);
+        const destinationLat = Number(
+          route.destination_latitude
+        );
+        const destinationLng = Number(
+          route.destination_longitude
+        );
 
-        const originLng =
-          Number(route.origin_longitude);
-
-        const destinationLat =
-          Number(route.destination_latitude);
-
-        const destinationLng =
-          Number(route.destination_longitude);
-
-        /*
-         * Some backend responses only contain
-         * station IDs. In that case use the first
-         * route as a fallback.
-         */
         if (
-          Number.isNaN(originLat) ||
-          Number.isNaN(originLng) ||
-          Number.isNaN(destinationLat) ||
-          Number.isNaN(destinationLng)
+          !Number.isFinite(originLat) ||
+          !Number.isFinite(originLng) ||
+          !Number.isFinite(destinationLat) ||
+          !Number.isFinite(destinationLng)
         ) {
           if (!bestRoute) {
             bestRoute = route;
           }
-
           continue;
         }
 
-        const startDistance =
-          Math.sqrt(
-            Math.pow(
-              departurePoint.latitude -
-                originLat,
-              2
-            ) +
-              Math.pow(
-                departurePoint.longitude -
-                  originLng,
-                2
-              )
-          );
+        const startDistance = Math.sqrt(
+          Math.pow(
+            departurePointRef.current!.latitude - originLat,
+            2
+          ) +
+          Math.pow(
+            departurePointRef.current!.longitude - originLng,
+            2
+          )
+        );
 
-        const endDistance =
-          Math.sqrt(
-            Math.pow(
-              destinationPoint.latitude -
-                destinationLat,
-              2
-            ) +
-              Math.pow(
-                destinationPoint.longitude -
-                  destinationLng,
-                2
-              )
-          );
+        const endDistance = Math.sqrt(
+          Math.pow(
+            destinationPointRef.current!.latitude -
+              destinationLat,
+            2
+          ) +
+          Math.pow(
+            destinationPointRef.current!.longitude -
+              destinationLng,
+            2
+          )
+        );
 
-        const score =
-          startDistance + endDistance;
+        const score = startDistance + endDistance;
 
         if (score < bestScore) {
           bestScore = score;
@@ -506,29 +400,28 @@ const DriverDashboard = ({ navigation }: any) => {
         }
       }
 
-      if (bestRoute?.id) {
-        setSelectedRouteId(
-          Number(bestRoute.id)
-        );
+      if (!bestRoute?.id) {
+        setSelectedRouteId(null);
+        selectedRouteIdRef.current = null;
 
-        selectedRouteIdRef.current =
-          Number(bestRoute.id);
+        Alert.alert(
+          'Route Not Found',
+          'No usable backend route was found for these locations.'
+        );
+        return;
       }
 
-      if (
-        bestRoute?.origin_station_id
-      ) {
-        setSelectedStationId(
-          Number(
-            bestRoute.origin_station_id
-          )
-        );
+      const routeId = Number(bestRoute.id);
 
-        selectedStationIdRef.current =
-          Number(
-            bestRoute.origin_station_id
-          );
-      }
+      setSelectedRouteId(routeId);
+      selectedRouteIdRef.current = routeId;
+
+      const stationId = bestRoute.origin_station_id
+        ? Number(bestRoute.origin_station_id)
+        : null;
+
+      setSelectedStationId(stationId);
+      selectedStationIdRef.current = stationId;
 
       Alert.alert(
         'Route Ready',
@@ -537,96 +430,63 @@ const DriverDashboard = ({ navigation }: any) => {
     } catch (error: any) {
       console.error(
         'SET DRIVER ROUTE ERROR:',
-        error?.response?.data ||
-          error?.message ||
-          error
+        error?.response?.data || error?.message || error
       );
 
-      /*
-       * Do not prevent the visual driver route
-       * from being displayed just because the
-       * backend route lookup failed.
-       */
       Alert.alert(
-        'Route Ready',
-        'Your selected Set-Off and Final Destination are ready on the map.'
+        'Route Search Error',
+        'Unable to retrieve backend routes. Please try again.'
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-
-  /*
-   * Calculate compass direction between two points.
-   */
+  // Calculate compass direction between two points.
   const calculateDirection = (
     fromLat: number,
     fromLng: number,
     toLat: number,
     toLng: number
   ) => {
-    const deltaLng =
-      toLng - fromLng;
+    const deltaLng = toLng - fromLng;
 
     const y =
-      Math.sin(
-        (deltaLng * Math.PI) / 180
-      ) *
-      Math.cos(
-        (toLat * Math.PI) / 180
-      );
+      Math.sin((deltaLng * Math.PI) / 180) *
+      Math.cos((toLat * Math.PI) / 180);
 
     const x =
-      Math.cos(
-        (fromLat * Math.PI) / 180
-      ) *
-        Math.sin(
-          (toLat * Math.PI) / 180
-        ) -
-      Math.sin(
-        (fromLat * Math.PI) / 180
-      ) *
-        Math.cos(
-          (toLat * Math.PI) / 180
-        ) *
-        Math.cos(
-          (deltaLng * Math.PI) / 180
-        );
+      Math.cos((fromLat * Math.PI) / 180) *
+        Math.sin((toLat * Math.PI) / 180) -
+      Math.sin((fromLat * Math.PI) / 180) *
+        Math.cos((toLat * Math.PI) / 180) *
+        Math.cos((deltaLng * Math.PI) / 180);
 
-    let bearing =
-      (Math.atan2(y, x) * 180) /
-      Math.PI;
+    let bearing = (Math.atan2(y, x) * 180) / Math.PI;
 
-    bearing =
-      (bearing + 360) % 360;
+    bearing = (bearing + 360) % 360;
 
     return bearing;
   };
 
-
-  /*
-   * Broadcast a single GPS position.
-   */
+  // Broadcast one GPS position.
   const broadcastLocation = useCallback(
     async (
       tripId: number,
       latitude: number,
       longitude: number
     ) => {
-      const destination =
-        destinationPointRef.current;
+      const destination = destinationPointRef.current;
 
       let direction = 0;
 
       if (destination) {
-        direction =
-          calculateDirection(
-            latitude,
-            longitude,
-            destination.latitude,
-            destination.longitude
-          );
+        direction = calculateDirection(
+          latitude,
+          longitude,
+          destination.latitude,
+          destination.longitude
+        );
       }
 
       setDriverLocation({
@@ -634,56 +494,37 @@ const DriverDashboard = ({ navigation }: any) => {
         longitude,
       });
 
-      const driverId =
-        Number(user?.id);
+      const driverId = Number(user?.id);
 
       if (!driverId) {
         console.error(
           'Cannot broadcast GPS: driver user ID is missing.'
         );
-
         return;
       }
 
-      const seats =
-        availableSeatsRef.current;
+      const seats = availableSeatsRef.current;
+      const currentOccupancy = occupancyRef.current;
 
-      const currentOccupancy =
-        occupancyRef.current;
-
-      console.log(
-        'Broadcasting driver GPS:',
-        {
-          driverId,
-          tripId,
+      try {
+        await socketService.emitLocation({
+          driver_id: driverId,
+          trip_id: tripId,
           latitude,
           longitude,
+          speed: 25,
           direction,
-          seats,
+          status: 'driving',
+          available_seats: seats,
           occupancy: currentOccupancy,
-        }
-      );
+        });
+      } catch (error: any) {
+        console.error(
+          'Socket GPS broadcast failed:',
+          error?.message || error
+        );
+      }
 
-      /*
-       * Socket.IO broadcast.
-       */
-      await socketService.emitLocation({
-        driver_id: driverId,
-        trip_id: tripId,
-        latitude,
-        longitude,
-        speed: 25,
-        direction,
-        status: 'driving',
-        available_seats: seats,
-        occupancy: currentOccupancy,
-      });
-
-      /*
-       * Also save GPS through the REST endpoint.
-       * This gives the backend a persistent GPS record
-       * for passenger matching and boarding detection.
-       */
       try {
         await apiService.logGps({
           driver_id: driverId,
@@ -705,306 +546,172 @@ const DriverDashboard = ({ navigation }: any) => {
     [user?.id]
   );
 
-
-  /*
-   * Simulate the TroTro moving from Set-Off
-   * toward Final Destination.
-   */
+  // Start simulated GPS movement.
   const startGpsSimulation = useCallback(
     async (tripId: number) => {
-      const start =
-        departurePointRef.current;
-
-      const destination =
-        destinationPointRef.current;
+      const start = departurePointRef.current;
+      const destination = destinationPointRef.current;
 
       if (!start || !destination) {
         Alert.alert(
           'Route Required',
           'Set-Off and Final Destination are required before broadcasting.'
         );
-
         return;
       }
 
       if (gpsIntervalRef.current) {
-        clearInterval(
-          gpsIntervalRef.current
-        );
-
+        clearInterval(gpsIntervalRef.current);
         gpsIntervalRef.current = null;
       }
 
-      let currentLat =
-        start.latitude;
+      let currentLat = start.latitude;
+      let currentLng = start.longitude;
 
-      let currentLng =
-        start.longitude;
-
-      const destinationLat =
-        destination.latitude;
-
-      const destinationLng =
-        destination.longitude;
+      const destinationLat = destination.latitude;
+      const destinationLng = destination.longitude;
 
       setDriverLocation({
         latitude: currentLat,
         longitude: currentLng,
       });
 
-      /*
-       * Broadcast the starting position immediately.
-       */
       await broadcastLocation(
         tripId,
         currentLat,
         currentLng
       );
 
-      /*
-       * Move every 5 seconds.
-       */
-      gpsIntervalRef.current =
-        setInterval(async () => {
-          if (tripPaused) {
-            return;
-          }
+      gpsIntervalRef.current = setInterval(async () => {
+        if (tripPausedRef.current) {
+          return;
+        }
 
-          const remainingLat =
-            destinationLat -
-            currentLat;
+        const remainingLat = destinationLat - currentLat;
+        const remainingLng = destinationLng - currentLng;
 
-          const remainingLng =
-            destinationLng -
-            currentLng;
+        const distance = Math.sqrt(
+          remainingLat * remainingLat +
+          remainingLng * remainingLng
+        );
 
-          const distance =
-            Math.sqrt(
-              remainingLat *
-                remainingLat +
-                remainingLng *
-                remainingLng
-            );
-
-          /*
-           * Destination reached.
-           */
-          if (distance < 0.00015) {
-            currentLat =
-              destinationLat;
-
-            currentLng =
-              destinationLng;
-
-            setDriverLocation({
-              latitude: currentLat,
-              longitude: currentLng,
-            });
-
-            await broadcastLocation(
-              tripId,
-              currentLat,
-              currentLng
-            );
-
-            if (
-              gpsIntervalRef.current
-            ) {
-              clearInterval(
-                gpsIntervalRef.current
-              );
-
-              gpsIntervalRef.current =
-                null;
-            }
-
-            setIsBroadcasting(false);
-
-            Alert.alert(
-              'Destination Reached',
-              'Your TroTro has reached the selected destination.'
-            );
-
-            return;
-          }
-
-          /*
-           * Move 15% closer to the destination.
-           */
-          currentLat +=
-            remainingLat * 0.15;
-
-          currentLng +=
-            remainingLng * 0.15;
+        if (distance < 0.00015) {
+          currentLat = destinationLat;
+          currentLng = destinationLng;
 
           await broadcastLocation(
             tripId,
             currentLat,
             currentLng
           );
-        }, 5000);
+
+          if (gpsIntervalRef.current) {
+            clearInterval(gpsIntervalRef.current);
+            gpsIntervalRef.current = null;
+          }
+
+          setIsBroadcasting(false);
+
+          Alert.alert(
+            'Destination Reached',
+            'Your TroTro has reached the selected destination. Please end your trip.'
+          );
+
+          return;
+        }
+
+        currentLat += remainingLat * 0.15;
+        currentLng += remainingLng * 0.15;
+
+        await broadcastLocation(
+          tripId,
+          currentLat,
+          currentLng
+        );
+      }, 5000);
     },
-    [
-      broadcastLocation,
-      tripPaused,
-    ]
+    [broadcastLocation]
   );
 
-
-  /*
-   * START BROADCAST & DRIVE
-   */
+  // Start broadcast and drive.
   const handleStartTrip = async () => {
+    if (isLoading) return;
+
     try {
-      if (!departurePoint) {
+      if (!departurePointRef.current) {
         Alert.alert(
           'Set-Off Point Required',
           'Please enter and select your Set-Off Point first.'
         );
-
         return;
       }
 
-      if (!destinationPoint) {
+      if (!destinationPointRef.current) {
         Alert.alert(
           'Destination Required',
           'Please enter and select your Final Destination first.'
         );
-
         return;
       }
 
-      if (!selectedRouteId) {
-        /*
-         * Try to set the route automatically before
-         * refusing to start the trip.
-         */
+      let routeId = selectedRouteIdRef.current;
+
+      if (!routeId) {
         await handleSetRoute();
+        routeId = selectedRouteIdRef.current;
       }
-
-      const routeId =
-        selectedRouteIdRef.current;
-
-      const stationId =
-        selectedStationIdRef.current;
 
       if (!routeId) {
         Alert.alert(
           'Route Not Ready',
-          'Please tap "Set Driver Route" first.'
+          'Please select a valid backend route before starting your trip.'
         );
-
         return;
       }
 
       setIsLoading(true);
 
-      console.log(
-        '========================================'
-      );
-
-      console.log(
-        'STARTING DRIVER BROADCAST'
-      );
-
-      console.log({
-        routeId,
-        stationId,
-        departure: departurePoint,
-        destination: destinationPoint,
-        seats: availableSeats,
-      });
-
-      console.log(
-        '========================================'
-      );
-
-      /*
-       * Make sure Socket.IO is connected BEFORE
-       * the first GPS broadcast.
-       */
       await socketService.connect();
 
-      /*
-       * Create the active trip in Flask.
-       */
-      const response =
-        await apiService.startTrip(
-          routeId,
-          stationId || undefined,
-          availableSeats
-        );
-
-      console.log(
-        'START TRIP RESPONSE:',
-        response
+      const response = await apiService.startTrip(
+        routeId,
+        selectedStationIdRef.current || undefined,
+        availableSeatsRef.current
       );
 
-      if (!response?.trip) {
+      if (!response?.trip?.id) {
         throw new Error(
-          'The server did not return a trip.'
+          'The server did not return a valid trip.'
         );
       }
 
-      const trip =
-        response.trip;
+      const trip = response.trip;
 
-      /*
-       * Store active trip.
-       */
-      dispatch(
-        setActiveTrip(trip)
-      );
+      dispatch(setActiveTrip(trip));
+      dispatch(updateDriverStatus('driving'));
 
-      dispatch(
-        updateDriverStatus('driving')
-      );
-
-      /*
-       * Start exactly at the selected Set-Off Point.
-       */
       setDriverLocation({
-        latitude:
-          departurePoint.latitude,
-        longitude:
-          departurePoint.longitude,
+        latitude: departurePointRef.current.latitude,
+        longitude: departurePointRef.current.longitude,
       });
 
-      /*
-       * Join the trip and route Socket.IO rooms.
-       */
-      if (trip.id) {
-        socketService.subscribeToTrip(
-          Number(trip.id)
-        );
-      }
+      socketService.subscribeToTrip(Number(trip.id));
+      socketService.subscribeToRoute(Number(routeId));
 
-      if (routeId) {
-        socketService.subscribeToRoute(
-          Number(routeId)
-        );
-      }
-
+      tripPausedRef.current = false;
       setTripPaused(false);
       setIsBroadcasting(true);
 
-      /*
-       * Start live GPS broadcasting.
-       */
-      await startGpsSimulation(
-        Number(trip.id)
-      );
+      await startGpsSimulation(Number(trip.id));
 
       Alert.alert(
         'Broadcast Started',
-        'Your TroTro is now broadcasting its live location to passengers.'
+        'Your TroTro is now broadcasting its location to passengers.'
       );
     } catch (error: any) {
       console.error(
         'START BROADCAST ERROR:',
-        error?.response?.data ||
-          error?.message ||
-          error
+        error?.response?.data || error?.message || error
       );
 
       setIsBroadcasting(false);
@@ -1013,38 +720,33 @@ const DriverDashboard = ({ navigation }: any) => {
         'Unable to Start Broadcast',
         error?.response?.data?.error ||
           error?.message ||
-          'Could not start the trip. Please make sure the backend is running and try again.'
+          'Could not start the trip. Please try again.'
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-
-  /*
-   * Pause trip.
-   */
+  // Pause trip.
   const handlePauseTrip = async () => {
+    if (isLoading) return;
+
     try {
       setIsLoading(true);
 
       await apiService.pauseTrip();
 
+      tripPausedRef.current = true;
       setTripPaused(true);
 
-      dispatch(
-        updateDriverStatus('parked')
-      );
+      dispatch(updateDriverStatus('parked'));
 
       Alert.alert(
         'Trip Paused',
         'Your broadcast has been paused.'
       );
     } catch (error: any) {
-      console.error(
-        'PAUSE TRIP ERROR:',
-        error
-      );
+      console.error('PAUSE TRIP ERROR:', error);
 
       Alert.alert(
         'Error',
@@ -1056,31 +758,26 @@ const DriverDashboard = ({ navigation }: any) => {
     }
   };
 
-
-  /*
-   * Resume trip.
-   */
+  // Resume trip.
   const handleResumeTrip = async () => {
+    if (isLoading) return;
+
     try {
       setIsLoading(true);
 
       await apiService.resumeTrip();
 
+      tripPausedRef.current = false;
       setTripPaused(false);
 
-      dispatch(
-        updateDriverStatus('driving')
-      );
+      dispatch(updateDriverStatus('driving'));
 
       Alert.alert(
         'Trip Resumed',
         'Your TroTro is broadcasting again.'
       );
     } catch (error: any) {
-      console.error(
-        'RESUME TRIP ERROR:',
-        error
-      );
+      console.error('RESUME TRIP ERROR:', error);
 
       Alert.alert(
         'Error',
@@ -1092,114 +789,116 @@ const DriverDashboard = ({ navigation }: any) => {
     }
   };
 
-
-  /*
-   * End trip.
-   */
+  // End trip.
   const handleEndTrip = async () => {
+    if (isLoading) return;
+
     try {
       setIsLoading(true);
 
       if (gpsIntervalRef.current) {
-        clearInterval(
-          gpsIntervalRef.current
-        );
-
+        clearInterval(gpsIntervalRef.current);
         gpsIntervalRef.current = null;
       }
 
       await apiService.endTrip();
 
       setIsBroadcasting(false);
+      tripPausedRef.current = false;
       setTripPaused(false);
 
-      dispatch(
-        updateDriverStatus('online')
-      );
+      dispatch(updateDriverStatus('online'));
+      dispatch(setActiveTrip(null as any));
 
       Alert.alert(
         'Trip Ended',
         'Your TroTro broadcast has ended.'
       );
     } catch (error: any) {
-      console.error(
-        'END TRIP ERROR:',
-        error
-      );
+      console.error('END TRIP ERROR:', error);
 
       Alert.alert(
         'Error',
         error?.response?.data?.error ||
-          'Unable to end the trip.'
+          'Unable to end the trip. Please try again.'
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-
-  /*
-   * Update available seats.
-   */
-  const changeSeats = async (
-    amount: number
-  ) => {
+  // Change available seats.
+  const changeSeats = async (amount: number) => {
     const newSeats = Math.max(
       0,
-      Math.min(
-        15,
-        availableSeats + amount
-      )
+      Math.min(15, availableSeatsRef.current + amount)
     );
 
     setAvailableSeats(newSeats);
-    availableSeatsRef.current =
-      newSeats;
+    availableSeatsRef.current = newSeats;
 
     try {
       if (activeTrip?.id) {
         await apiService.updateSeats(
           newSeats,
-          occupancy
+          occupancyRef.current
         );
       }
     } catch (error) {
-      console.error(
-        'UPDATE SEATS ERROR:',
-        error
-      );
+      console.error('UPDATE SEATS ERROR:', error);
     }
   };
 
-
-  /*
-   * Update occupancy.
-   */
+  // Change occupancy.
   const changeOccupancy = async (
-    value:
-      | 'empty'
-      | 'half-full'
-      | 'full'
+    value: 'empty' | 'half-full' | 'full'
   ) => {
     setOccupancy(value);
-    occupancyRef.current =
-      value;
+    occupancyRef.current = value;
 
     try {
       if (activeTrip?.id) {
         await apiService.updateSeats(
-          availableSeats,
+          availableSeatsRef.current,
           value
         );
       }
     } catch (error) {
-      console.error(
-        'UPDATE OCCUPANCY ERROR:',
-        error
-      );
+      console.error('UPDATE OCCUPANCY ERROR:', error);
     }
   };
 
+  // Exit dashboard and return to Welcome.
+  // This follows the same logout approach as PassengerDashboard.
+  const handleExit = () => {
+    try {
+      // Stop local GPS simulation.
+      if (gpsIntervalRef.current) {
+        clearInterval(gpsIntervalRef.current);
+        gpsIntervalRef.current = null;
+      }
+
+      // Clear the driver's login session.
+      dispatch(logout());
+
+      // Return to the Welcome screen.
+      if (navigation?.reset) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Welcome' }],
+        });
+      } else if (navigation?.navigate) {
+        navigation.navigate('Welcome');
+      }
+    } catch (error) {
+      console.error(
+        'Could not exit Driver Dashboard:',
+        error
+      );
+
+      navigation?.navigate?.('Welcome');
+    }
+  };
 
   const statusText = tripPaused
     ? 'Trip Paused'
@@ -1207,18 +906,16 @@ const DriverDashboard = ({ navigation }: any) => {
       ? 'Broadcast Active'
       : 'Ready to Drive';
 
-
   return (
     <View style={styles.container}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={
-          styles.content
-        }
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Dashboard header */}
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerUser}>
             <Text style={styles.welcome}>
               Welcome back,
             </Text>
@@ -1228,43 +925,48 @@ const DriverDashboard = ({ navigation }: any) => {
             </Text>
           </View>
 
-          <View
-            style={[
-              styles.statusBadge,
-              isBroadcasting &&
-                styles.statusBadgeActive,
-            ]}
-          >
+          <View style={styles.headerActions}>
             <View
               style={[
-                styles.statusDot,
-                isBroadcasting &&
-                  styles.statusDotActive,
+                styles.statusBadge,
+                isBroadcasting && styles.statusBadgeActive,
               ]}
-            />
+            >
+              <View
+                style={[
+                  styles.statusDot,
+                  isBroadcasting && styles.statusDotActive,
+                ]}
+              />
 
-            <Text style={styles.statusText}>
-              {statusText}
-            </Text>
+              <Text style={styles.statusText}>
+                {statusText}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleExit}
+              activeOpacity={0.8}
+              accessibilityLabel="Log out"
+            >
+              <Text style={styles.logoutIcon}>
+                🚪
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-
+        {/* Driver map */}
         <View style={styles.mapCard}>
           <DriverMap
-            setOffPoint={
-              departurePoint
-            }
-            destination={
-              destinationPoint
-            }
-            driverLocation={
-              driverLocation
-            }
+            setOffPoint={departurePoint}
+            destination={destinationPoint}
+            driverLocation={driverLocation}
           />
         </View>
 
-
+        {/* Route selection */}
         <View style={styles.routeCard}>
           <View style={styles.routeHeaderRow}>
             <View style={styles.routeHeaderIcon}>
@@ -1277,6 +979,7 @@ const DriverDashboard = ({ navigation }: any) => {
               <Text style={styles.sectionTitle}>
                 Set Your Route
               </Text>
+
               <Text style={styles.routeSubtitle}>
                 Choose where your TroTro starts and where it is going.
               </Text>
@@ -1297,13 +1000,12 @@ const DriverDashboard = ({ navigation }: any) => {
 
                   if (!text.trim()) {
                     setSetOffResults([]);
+                    setDeparturePoint(null);
+                    departurePointRef.current = null;
                   }
                 }}
                 onSubmitEditing={() =>
-                  searchLocation(
-                    setOffQuery,
-                    'setoff'
-                  )
+                  searchLocation(setOffQuery, 'setoff')
                 }
                 placeholder="Where are you starting?"
                 placeholderTextColor="#888"
@@ -1313,81 +1015,52 @@ const DriverDashboard = ({ navigation }: any) => {
                 style={[
                   styles.searchIconButton,
                   {
-                    transform: [
-                      { scale: searchPulse },
-                    ],
+                    transform: [{ scale: searchPulse }],
                   },
                 ]}
               >
                 <TouchableOpacity
                   onPress={() =>
-                    searchLocation(
-                      setOffQuery,
-                      'setoff'
-                    )
+                    searchLocation(setOffQuery, 'setoff')
                   }
                   disabled={isSearchingSetOff}
                   activeOpacity={0.75}
                 >
                   {isSearchingSetOff ? (
-                    <ActivityIndicator
-                      color="#fff"
-                      size="small"
-                    />
+                    <ActivityIndicator color="#fff" size="small" />
                   ) : (
-                    <Text style={styles.searchIcon}>
-                      🔍
-                    </Text>
+                    <Text style={styles.searchIcon}>🔍</Text>
                   )}
                 </TouchableOpacity>
               </Animated.View>
             </View>
           </View>
 
-          {setOffResults.map(
-            (location, index) => (
-              <TouchableOpacity
-                key={`setoff-${index}`}
-                style={styles.resultItem}
-                onPress={() =>
-                  selectSetOffPoint(
-                    location
-                  )
-                }
-              >
-                <Text
-                  style={styles.resultText}
-                >
-                  {location.address}
-                </Text>
-              </TouchableOpacity>
-            )
-          )}
+          {setOffResults.map((location, index) => (
+            <TouchableOpacity
+              key={`setoff-${index}`}
+              style={styles.resultItem}
+              onPress={() => selectSetOffPoint(location)}
+            >
+              <Text style={styles.resultText}>
+                {location.address}
+              </Text>
+            </TouchableOpacity>
+          ))}
 
           {departurePoint && (
-            <View
-              style={styles.selectedLocation}
-            >
-              <Text
-                style={styles.selectedTitle}
-              >
+            <View style={styles.selectedLocation}>
+              <Text style={styles.selectedTitle}>
                 ✓ Set-Off Selected
               </Text>
 
-              <Text
-                style={styles.selectedText}
-              >
+              <Text style={styles.selectedText}>
                 {departurePoint.address}
               </Text>
             </View>
           )}
 
-          <Text
-            style={[
-              styles.label,
-              styles.destinationLabel,
-            ]}
-          >
+          <Text style={[styles.label, styles.destinationLabel]}>
             Final Destination
           </Text>
 
@@ -1397,21 +1070,16 @@ const DriverDashboard = ({ navigation }: any) => {
                 style={styles.input}
                 value={destinationQuery}
                 onChangeText={(text) => {
-                  setDestinationQuery(
-                    text
-                  );
+                  setDestinationQuery(text);
 
                   if (!text.trim()) {
-                    setDestinationResults(
-                      []
-                    );
+                    setDestinationResults([]);
+                    setDestinationPoint(null);
+                    destinationPointRef.current = null;
                   }
                 }}
                 onSubmitEditing={() =>
-                  searchLocation(
-                    destinationQuery,
-                    'destination'
-                  )
+                  searchLocation(destinationQuery, 'destination')
                 }
                 placeholder="Where are you going?"
                 placeholderTextColor="#888"
@@ -1421,70 +1089,46 @@ const DriverDashboard = ({ navigation }: any) => {
                 style={[
                   styles.searchIconButton,
                   {
-                    transform: [
-                      { scale: searchPulse },
-                    ],
+                    transform: [{ scale: searchPulse }],
                   },
                 ]}
               >
                 <TouchableOpacity
                   onPress={() =>
-                    searchLocation(
-                      destinationQuery,
-                      'destination'
-                    )
+                    searchLocation(destinationQuery, 'destination')
                   }
                   disabled={isSearchingDestination}
                   activeOpacity={0.75}
                 >
                   {isSearchingDestination ? (
-                    <ActivityIndicator
-                      color="#fff"
-                      size="small"
-                    />
+                    <ActivityIndicator color="#fff" size="small" />
                   ) : (
-                    <Text style={styles.searchIcon}>
-                      🔍
-                    </Text>
+                    <Text style={styles.searchIcon}>🔍</Text>
                   )}
                 </TouchableOpacity>
               </Animated.View>
             </View>
           </View>
 
-          {destinationResults.map(
-            (location, index) => (
-              <TouchableOpacity
-                key={`destination-${index}`}
-                style={styles.resultItem}
-                onPress={() =>
-                  selectDestinationPoint(
-                    location
-                  )
-                }
-              >
-                <Text
-                  style={styles.resultText}
-                >
-                  {location.address}
-                </Text>
-              </TouchableOpacity>
-            )
-          )}
+          {destinationResults.map((location, index) => (
+            <TouchableOpacity
+              key={`destination-${index}`}
+              style={styles.resultItem}
+              onPress={() => selectDestinationPoint(location)}
+            >
+              <Text style={styles.resultText}>
+                {location.address}
+              </Text>
+            </TouchableOpacity>
+          ))}
 
           {destinationPoint && (
-            <View
-              style={styles.selectedLocation}
-            >
-              <Text
-                style={styles.selectedTitle}
-              >
+            <View style={styles.selectedLocation}>
+              <Text style={styles.selectedTitle}>
                 ✓ Destination Selected
               </Text>
 
-              <Text
-                style={styles.selectedText}
-              >
+              <Text style={styles.selectedText}>
                 {destinationPoint.address}
               </Text>
             </View>
@@ -1497,151 +1141,94 @@ const DriverDashboard = ({ navigation }: any) => {
             activeOpacity={0.85}
           >
             {isLoading ? (
-              <ActivityIndicator
-                color="#fff"
-              />
+              <ActivityIndicator color="#fff" />
             ) : (
-              <Text
-                style={styles.routeButtonText}
-              >
+              <Text style={styles.routeButtonText}>
                 Set Driver Route
               </Text>
             )}
           </TouchableOpacity>
         </View>
 
-
+        {/* TroTro capacity */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>
             TroTro Capacity
           </Text>
 
-          <View
-            style={
-              styles.capacityRow
-            }
-          >
+          <View style={styles.capacityRow}>
             <TouchableOpacity
-              style={
-                styles.capacityButton
-              }
-              onPress={() =>
-                changeSeats(-1)
-              }
+              style={styles.capacityButton}
+              onPress={() => changeSeats(-1)}
             >
-              <Text
-                style={
-                  styles.capacityButtonText
-                }
-              >
+              <Text style={styles.capacityButtonText}>
                 −
               </Text>
             </TouchableOpacity>
 
-            <View
-              style={
-                styles.capacityDisplay
-              }
-            >
-              <Text
-                style={
-                  styles.capacityNumber
-                }
-              >
+            <View style={styles.capacityDisplay}>
+              <Text style={styles.capacityNumber}>
                 {availableSeats}
               </Text>
 
-              <Text
-                style={
-                  styles.capacityLabel
-                }
-              >
+              <Text style={styles.capacityLabel}>
                 Seats Available
               </Text>
             </View>
 
             <TouchableOpacity
-              style={
-                styles.capacityButton
-              }
-              onPress={() =>
-                changeSeats(1)
-              }
+              style={styles.capacityButton}
+              onPress={() => changeSeats(1)}
             >
-              <Text
-                style={
-                  styles.capacityButtonText
-                }
-              >
+              <Text style={styles.capacityButtonText}>
                 +
               </Text>
             </TouchableOpacity>
           </View>
 
-
           <Text style={styles.label}>
             Occupancy
           </Text>
 
-          <View
-            style={
-              styles.occupancyRow
-            }
-          >
-            {(
-              [
-                'empty',
-                'half-full',
-                'full',
-              ] as const
-            ).map((value) => (
-              <TouchableOpacity
-                key={value}
-                style={[
-                  styles.occupancyButton,
-                  occupancy === value &&
-                    styles.occupancyButtonSelected,
-                ]}
-                onPress={() =>
-                  changeOccupancy(
-                    value
-                  )
-                }
-              >
-                <Text
+          <View style={styles.occupancyRow}>
+            {(['empty', 'half-full', 'full'] as const).map(
+              (value) => (
+                <TouchableOpacity
+                  key={value}
                   style={[
-                    styles.occupancyText,
+                    styles.occupancyButton,
                     occupancy === value &&
-                      styles.occupancyTextSelected,
+                      styles.occupancyButtonSelected,
                   ]}
+                  onPress={() => changeOccupancy(value)}
                 >
-                  {value}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.occupancyText,
+                      occupancy === value &&
+                        styles.occupancyTextSelected,
+                    ]}
+                  >
+                    {value}
+                  </Text>
+                </TouchableOpacity>
+              )
+            )}
           </View>
         </View>
 
-
+        {/* Trip controls */}
         {!isBroadcasting ? (
           <TouchableOpacity
             style={styles.broadcastButton}
-            onPress={
-              handleStartTrip
-            }
+            onPress={handleStartTrip}
             disabled={isLoading}
+            activeOpacity={0.85}
           >
             {isLoading ? (
-              <ActivityIndicator
-                color="#fff"
-                size="small"
-              />
+              <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text
-                style={
-                  styles.broadcastButtonText
-                }
-              >
+              <Text style={styles.broadcastButtonText}>
                 Start Broadcast & Drive
               </Text>
             )}
@@ -1650,101 +1237,55 @@ const DriverDashboard = ({ navigation }: any) => {
           <View style={styles.tripControls}>
             {!tripPaused ? (
               <TouchableOpacity
-                style={
-                  styles.pauseButton
-                }
-                onPress={
-                  handlePauseTrip
-                }
+                style={styles.pauseButton}
+                onPress={handlePauseTrip}
                 disabled={isLoading}
               >
-                <Text
-                  style={
-                    styles.controlButtonText
-                  }
-                >
+                <Text style={styles.controlButtonText}>
                   Pause Trip
                 </Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
-                style={
-                  styles.resumeButton
-                }
-                onPress={
-                  handleResumeTrip
-                }
+                style={styles.resumeButton}
+                onPress={handleResumeTrip}
                 disabled={isLoading}
               >
-                <Text
-                  style={
-                    styles.controlButtonText
-                  }
-                >
+                <Text style={styles.controlButtonText}>
                   Resume Trip
                 </Text>
               </TouchableOpacity>
             )}
 
             <TouchableOpacity
-              style={
-                styles.endButton
-              }
-              onPress={
-                handleEndTrip
-              }
+              style={styles.endButton}
+              onPress={handleEndTrip}
               disabled={isLoading}
             >
-              <Text
-                style={
-                  styles.controlButtonText
-                }
-              >
+              <Text style={styles.controlButtonText}>
                 End Trip
               </Text>
             </TouchableOpacity>
           </View>
         )}
 
-
         {isBroadcasting && (
-          <View
-            style={
-              styles.broadcastInfo
-            }
-          >
-            <View
-              style={
-                styles.broadcastIndicator
-              }
-            />
+          <View style={styles.broadcastInfo}>
+            <View style={styles.broadcastIndicator} />
 
-            <View
-              style={
-                styles.broadcastTextContainer
-              }
-            >
-              <Text
-                style={
-                  styles.broadcastTitle
-                }
-              >
+            <View style={styles.broadcastTextContainer}>
+              <Text style={styles.broadcastTitle}>
                 Live Broadcast Active
               </Text>
 
-              <Text
-                style={
-                  styles.broadcastDescription
-                }
-              >
-                Your TroTro location is being
-                broadcast to passengers.
+              <Text style={styles.broadcastDescription}>
+                Your TroTro location is being broadcast to passengers.
               </Text>
             </View>
           </View>
         )}
 
-
+        {/* Emergency SOS */}
         <TouchableOpacity
           style={styles.sosButton}
           onPress={() =>
@@ -1754,9 +1295,7 @@ const DriverDashboard = ({ navigation }: any) => {
             )
           }
         >
-          <Text
-            style={styles.sosText}
-          >
+          <Text style={styles.sosText}>
             SOS / Emergency
           </Text>
         </TouchableOpacity>
@@ -1764,7 +1303,6 @@ const DriverDashboard = ({ navigation }: any) => {
     </View>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
@@ -1786,6 +1324,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+
+  headerUser: {
+    flex: 1,
+  },
+
+  headerActions: {
+    alignItems: 'flex-end',
+    gap: 8,
   },
 
   welcome: {
@@ -1829,6 +1376,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#444',
+  },
+
+  // Matching PassengerDashboard logout button.
+  logoutButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#E3F2FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  logoutIcon: {
+    fontSize: 20,
   },
 
   mapCard: {
@@ -2158,6 +1719,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
 
 export default DriverDashboard;
